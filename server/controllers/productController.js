@@ -1,10 +1,13 @@
 
 import mongoose from 'mongoose';
 import Product from '../models/Product.js';
+import connectDB from '../config/db.js';
 
 // GET /api/products
 export const getProducts = async (req, res, next) => {
   try {
+    await connectDB;
+
     const {
       search,
       category,
@@ -141,6 +144,8 @@ export const getProducts = async (req, res, next) => {
 // GET /api/products/:id
 export const getProductById = async (req, res, next) => {
   try {
+    await connectDB();
+
     const { id } = req.params;
 
     // Validate MongoDB ObjectId
