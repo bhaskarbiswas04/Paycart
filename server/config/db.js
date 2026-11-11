@@ -1,4 +1,3 @@
-// config/db.js
 import mongoose from "mongoose";
 
 let cached = global.mongoose;
@@ -14,7 +13,8 @@ const connectDB = async () => {
 
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false, // Disables command buffering so errors show up instantly if disconnected
+      bufferCommands: true, // Changed to true so Mongoose safely buffers queries during connection establishment
+      serverSelectionTimeoutMS: 5000,
     };
 
     const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
