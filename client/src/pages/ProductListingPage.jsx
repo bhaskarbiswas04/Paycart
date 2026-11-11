@@ -29,7 +29,33 @@ function ProductListingPage() {
     limit: 10,
   });
 
-  // Fetch products whenever filters change
+  // Event handlers that update filters AND reset page to 1 simultaneously
+  const handleSearchChange = (e) => {
+    setSearch(e.target.value);
+    setPage(1);
+  };
+
+  const handleCategoryChange = (newCategory) => {
+    setCategory(newCategory);
+    setPage(1);
+  };
+
+  const handleMinPriceChange = (value) => {
+    setMinPrice(value);
+    setPage(1);
+  };
+
+  const handleMaxPriceChange = (value) => {
+    setMaxPrice(value);
+    setPage(1);
+  };
+
+  const handleSortChange = (newSort) => {
+    setSort(newSort);
+    setPage(1);
+  };
+
+  // Fetch products whenever filters or page change (No setState inside this effect!)
   useEffect(() => {
     const controller = new AbortController();
 
@@ -67,7 +93,7 @@ function ProductListingPage() {
         setProducts(response.data.products);
         setPagination(response.data.pagination);
       } catch (err) {
-        if (err.name !== "CanceledError") {
+        if (err.name !== "CanceledError" && err.name !== "AbortError") {
           setError(err.message);
           setProducts([]);
         }
@@ -84,11 +110,6 @@ function ProductListingPage() {
       controller.abort();
     };
   }, [search, category, minPrice, maxPrice, sort, page]);
-
-  // Reset pagination when filters change
-  useEffect(() => {
-    setPage(1);
-  }, [search, category, minPrice, maxPrice, sort]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -115,7 +136,7 @@ function ProductListingPage() {
           <input
             type="search"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={handleSearchChange}
             placeholder="Search products..."
             className="w-full rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm shadow-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
@@ -127,13 +148,13 @@ function ProductListingPage() {
           <div className="lg:col-span-1">
             <ProductFilters
               category={category}
-              setCategory={setCategory}
+              setCategory={handleCategoryChange}
               minPrice={minPrice}
-              setMinPrice={setMinPrice}
+              setMinPrice={handleMinPriceChange}
               maxPrice={maxPrice}
-              setMaxPrice={setMaxPrice}
+              setMaxPrice={handleMaxPriceChange}
               sort={sort}
-              setSort={setSort}
+              setSort={handleSortChange}
             />
           </div>
 
