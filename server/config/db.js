@@ -17,7 +17,7 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000,
     };
 
-    const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
+    const uri = process.env.MONGODB_URI;
     if (!uri) {
       throw new Error("Please define the MONGO_URI environment variable");
     }
