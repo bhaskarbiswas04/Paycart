@@ -19,7 +19,3 @@ const startServer = async () => {
 };
 
 startServer();
-
-// 04bhaskarbiswas_db_user
-// NNlgoOg5QG9aUsFQ
-// mongodb+srv://04bhaskarbiswas_db_user:NNlgoOg5QG9aUsFQ@cluster0.thy2qaw.mongodb.net/
