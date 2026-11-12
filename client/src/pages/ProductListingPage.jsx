@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { getProducts } from "../services/productService";
 
-import Navbar from "../components/Navbar";
+// import Navbar from "../components/Navbar";
 import ProductCard from "../components/ProductCard";
 import ProductFilters from "../components/ProductFilters";
 import ProductSkeleton from "../components/ProductSkeleton";
@@ -113,7 +113,6 @@ function ProductListingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
 
       <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         {/* Page Header */}

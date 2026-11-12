@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
+import { useCart } from "../context/CartContext";
 
 function Navbar() {
+
+  const { totalItems } = useCart();
+
   return (
     <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -24,11 +28,12 @@ function Navbar() {
         </div>
 
         {/* Cart */}
-        <Link
-          to="/cart"
-          className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600"
-        >
-          Cart
+        <Link to="/cart" className="relative flex items-center gap-2">
+          <span>Cart</span>
+
+          <span className="rounded-full bg-black px-2 py-0.5 text-xs text-white">
+            {totalItems}
+          </span>
         </Link>
       </div>
     </nav>

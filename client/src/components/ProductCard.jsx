@@ -1,7 +1,9 @@
 import { formatCurrency } from "../utils/formatCurrency";
+import { useCart } from "../context/CartContext";
 
 function ProductCard({ product }) {
   const image = product.images?.[0];
+  const { addItem } = useCart();
 
   return (
     <article className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition duration-300 hover:-translate-y-1 hover:shadow-xl">
@@ -55,10 +57,11 @@ function ProductCard({ product }) {
 
           <button
             type="button"
-            disabled={product.stock === 0}
+            onClick={() => addItem(product)}
+            disabled={product.stock < 1}
             className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            Add to Cart
+            {product.stock < 1 ? "Out of Stock" : "Add to Cart"}
           </button>
         </div>
       </div>
