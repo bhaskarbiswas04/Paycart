@@ -136,12 +136,12 @@ function CartPage() {
             <span>{formatCurrency(subtotalPaise)}</span>
           </div>
 
-          <button
-            disabled
-            className="mt-6 w-full cursor-not-allowed rounded-lg bg-black px-4 py-3 text-white opacity-50"
+          <Link
+            to="/checkout"
+            className="mt-6 block w-full rounded-lg bg-black px-4 py-3 text-center font-semibold text-white hover:bg-gray-800"
           >
-            Checkout — Coming in Phase 6
-          </button>
+            Proceed to Checkout
+          </Link>
 
           <Link
             to="/"
