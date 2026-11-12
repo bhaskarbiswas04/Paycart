@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 
 import connectDB from "./config/db.js";
 import productRoutes from "./routes/productRoutes.js";
+import orderRoutes from "./routes/orderRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 const app = express();
@@ -33,6 +34,9 @@ app.get("/api/health", (req, res) => {
 
 // 4. Product routes
 app.use("/api/products", productRoutes);
+
+//Order routes
+app.use("/api/orders", orderRoutes);
 
 // 5. Error handling
 app.use(notFound);
