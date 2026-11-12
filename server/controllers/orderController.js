@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import Order from "../models/Order.js";
+import razorpay from "../services/razorpayService.js";
 
 export const createOrder = async (req, res) => {
   try {
@@ -191,6 +192,86 @@ export const createOrder = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Unable to create order",
+    });
+  }
+};
+
+// Creat Razorpay Order
+export const createRazorpayOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID",
+      });
+    }
+
+    // Find the existing local order
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    if (order.paymentStatus !== "Pending") {
+      return res.status(400).json({
+        success: false,
+        message: "This order is not eligible for payment",
+      });
+    }
+
+    // Avoid creating another Razorpay order for the same local order
+    if (order.razorpayOrderId) {
+      return res.status(200).json({
+        success: true,
+        message: "Payment order already exists",
+        payment: {
+          keyId: process.env.RAZORPAY_KEY_ID,
+          razorpayOrderId: order.razorpayOrderId,
+          amount: order.amountPaise,
+          currency: order.currency,
+          localOrderId: order._id,
+        },
+      });
+    }
+
+    // Create Razorpay order using trusted MongoDB amount
+    const razorpayOrder = await razorpay.orders.create({
+      amount: order.amountPaise,
+      currency: order.currency,
+      receipt: order._id.toString(),
+      notes: {
+        localOrderId: order._id.toString(),
+      },
+    });
+
+    // Save Razorpay order ID in MongoDB
+    order.razorpayOrderId = razorpayOrder.id;
+
+    await order.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Razorpay order created successfully",
+      payment: {
+        keyId: process.env.RAZORPAY_KEY_ID,
+        razorpayOrderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        localOrderId: order._id,
+      },
+    });
+  } catch (error) {
+    console.error("Razorpay order creation error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to initialize payment",
     });
   }
 };
