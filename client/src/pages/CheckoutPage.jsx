@@ -1,10 +1,16 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../utils/formatCurrency";
+import { createOrder } from "../services/orderService";
 
 function CheckoutPage() {
-  const { cartItems, totalItems, subtotalPaise } = useCart();
+  const { cartItems, totalItems, subtotalPaise, clearCart } = useCart();
+
+  const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState("");
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -69,15 +75,59 @@ function CheckoutPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    if (!validateForm()) return;
+  if (loading) return;
 
-    // Backend order creation will be connected in Stage 6B.
-    console.log("Checkout form data:", formData);
-    console.log("Cart items:", cartItems);
-  };
+  if (!validateForm()) return;
+
+  setLoading(true);
+  setApiError("");
+
+  try {
+    const orderPayload = {
+      customer: {
+        name: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        addressLine1: formData.addressLine1.trim(),
+        addressLine2: formData.addressLine2.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        postalCode: formData.postalCode.trim(),
+      },
+
+      items: cartItems.map((item) => ({
+        productId: item._id,
+        quantity: item.quantity,
+      })),
+    };
+
+    const response = await createOrder(orderPayload);
+
+    if (!response.success || !response.order?.id) {
+      throw new Error("Invalid order response from server");
+    }
+
+    // Save the confirmation details for navigation.
+    const createdOrder = response.order;
+
+    // Clear cart only after successful order creation.
+    clearCart();
+
+    navigate("/order-confirmation", {
+      state: { order: createdOrder },
+      replace: true,
+    });
+  } catch (error) {
+    setApiError(error.message || "Something went wrong. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   if (cartItems.length === 0) {
     return (
@@ -232,11 +282,21 @@ function CheckoutPage() {
             </div>
           </section>
 
+          {apiError && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+            >
+              {apiError}
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full rounded-lg bg-black px-6 py-4 font-semibold text-white hover:bg-gray-800"
+            disabled={loading}
+            className="w-full rounded-lg bg-black px-6 py-4 font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Place Order
+            {loading ? "Creating Order..." : "Place Order"}
           </button>
         </form>
 
