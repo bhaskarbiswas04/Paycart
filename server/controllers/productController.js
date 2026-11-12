@@ -6,7 +6,7 @@ import connectDB from '../config/db.js';
 // GET /api/products
 export const getProducts = async (req, res, next) => {
   try {
-    await connectDB;
+    await connectDB();
 
     const {
       search,
