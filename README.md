@@ -7,7 +7,7 @@ PayCart is a full-stack e-commerce checkout application built using React, Tailw
 
 - [Client](https://paycart-cvqi.vercel.app/)
 - **Backend API:** https://paycart-alpha.vercel.app/api
-- **Health Check:** https://paycart-alpha.vercel.app/api/health
+- [Health Check](https://paycart-alpha.vercel.app/api/health)
 
 ## Features
 
