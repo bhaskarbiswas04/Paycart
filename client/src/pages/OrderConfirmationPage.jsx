@@ -18,6 +18,13 @@ function OrderConfirmationPage() {
   const [paymentResponse, setPaymentResponse] = useState(null);
   const [verifiedPayment, setVerifiedPayment] = useState(null);
 
+  // Get Payment ID from available response properties
+  const paymentId =
+    verifiedPayment?.paymentId ||
+    verifiedPayment?.razorpayPaymentId ||
+    paymentResponse?.razorpay_payment_id ||
+    null;
+
   // 1. Verify payment with our backend
   const handleVerifyPayment = async (response) => {
     if (!response || verifying || verifiedPayment) return;
@@ -28,9 +35,7 @@ function OrderConfirmationPage() {
     try {
       const verification = await verifyPayment(order.id, {
         razorpay_payment_id: response.razorpay_payment_id,
-
         razorpay_order_id: response.razorpay_order_id,
-
         razorpay_signature: response.razorpay_signature,
       });
 
@@ -95,7 +100,6 @@ function OrderConfirmationPage() {
       // Razorpay Checkout configuration
       const options = {
         key: payment.keyId,
-
         amount: payment.amount,
         currency: payment.currency,
 
@@ -153,7 +157,6 @@ function OrderConfirmationPage() {
       razorpay.open();
     } catch (error) {
       setPaymentError(error.message || "Unable to start payment.");
-
       setLoading(false);
     }
   };
@@ -267,7 +270,7 @@ function OrderConfirmationPage() {
             </p>
 
             <p className="mt-2 break-all text-xs text-gray-600">
-              Payment ID: {paymentResponse.razorpay_payment_id}
+              Payment ID: {paymentId || "Not available"}
             </p>
           </div>
         )}
@@ -296,7 +299,7 @@ function OrderConfirmationPage() {
             </p>
 
             <p className="mt-2 break-all text-xs text-gray-600">
-              Payment ID: {verifiedPayment.paymentId}
+              Payment ID: {paymentId || "Unavailable"}
             </p>
           </div>
         )}
