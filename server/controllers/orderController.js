@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import mongoose from "mongoose";
 import Product from "../models/Product.js";
 import Order from "../models/Order.js";
@@ -272,6 +273,187 @@ export const createRazorpayOrder = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Unable to initialize payment",
+    });
+  }
+};
+
+
+// Verify Payment Order
+export const verifyPayment = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } =
+      req.body;
+
+    // 1. Validate request
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid order ID",
+      });
+    }
+
+    if (
+      typeof razorpay_payment_id !== "string" ||
+      typeof razorpay_order_id !== "string" ||
+      typeof razorpay_signature !== "string" ||
+      !/^pay_[a-zA-Z0-9]+$/.test(razorpay_payment_id) ||
+      !/^order_[a-zA-Z0-9]+$/.test(razorpay_order_id) ||
+      !/^[a-fA-F0-9]{64}$/.test(razorpay_signature)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment verification details",
+      });
+    }
+
+    // 2. Find our MongoDB order
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    // 3. Verify Razorpay order ID against our database
+    if (!order.razorpayOrderId || order.razorpayOrderId !== razorpay_order_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Razorpay order ID mismatch",
+      });
+    }
+
+    // 4. Handle repeated verification safely
+    if (order.paymentStatus === "Paid") {
+      if (order.razorpayPaymentId === razorpay_payment_id) {
+        return res.status(200).json({
+          success: true,
+          message: "Payment already verified",
+          paymentStatus: "Paid",
+        });
+      }
+
+      return res.status(409).json({
+        success: false,
+        message: "This order has already been paid",
+      });
+    }
+
+    if (order.paymentStatus !== "Pending") {
+      return res.status(409).json({
+        success: false,
+        message: "Order is not eligible for payment verification",
+      });
+    }
+
+    // 5. Generate HMAC SHA256 signature
+    // IMPORTANT: Use the order ID stored in MongoDB.
+    const generatedSignature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(`${order.razorpayOrderId}|${razorpay_payment_id}`)
+      .digest();
+
+    const receivedSignature = Buffer.from(razorpay_signature, "hex");
+
+    // 6. Compare signatures safely
+    const signatureValid =
+      generatedSignature.length === receivedSignature.length &&
+      crypto.timingSafeEqual(generatedSignature, receivedSignature);
+
+    if (!signatureValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment signature verification failed",
+      });
+    }
+
+    // 7. Fetch actual payment details from Razorpay
+    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+
+    // 8. Verify payment details independently
+    if (
+      payment.order_id !== order.razorpayOrderId ||
+      payment.amount !== order.amountPaise ||
+      payment.currency !== order.currency
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment details do not match the order",
+      });
+    }
+
+    // Signature verification proves authenticity,
+    // but we only mark Paid after Razorpay reports captured.
+    if (payment.status !== "captured") {
+      return res.status(409).json({
+        success: false,
+        message: "Payment is not captured yet",
+        paymentStatus: payment.status,
+      });
+    }
+
+    // 9. Atomically update the order.
+    // Prevent concurrent verification from overwriting another payment.
+    const updatedOrder = await Order.findOneAndUpdate(
+      {
+        _id: order._id,
+        paymentStatus: "Pending",
+        razorpayOrderId: order.razorpayOrderId,
+        razorpayPaymentId: { $exists: false },
+      },
+      {
+        $set: {
+          razorpayPaymentId: razorpay_payment_id,
+          razorpaySignature: razorpay_signature,
+          paymentStatus: "Paid",
+          paidAt: new Date(),
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    if (!updatedOrder) {
+      // Another request may have completed verification.
+      const latestOrder = await Order.findById(order._id);
+
+      if (
+        latestOrder?.paymentStatus === "Paid" &&
+        latestOrder.razorpayPaymentId === razorpay_payment_id
+      ) {
+        return res.status(200).json({
+          success: true,
+          message: "Payment already verified",
+          paymentStatus: "Paid",
+        });
+      }
+
+      return res.status(409).json({
+        success: false,
+        message: "Order payment state changed. Please check the order.",
+      });
+    }
+
+    // 10. Return verified result
+    return res.status(200).json({
+      success: true,
+      message: "Payment verified successfully",
+      paymentStatus: updatedOrder.paymentStatus,
+      orderId: updatedOrder._id,
+      paymentId: updatedOrder.razorpayPaymentId,
+      amountPaise: updatedOrder.amountPaise,
+    });
+  } catch (error) {
+    console.error("Payment verification error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Unable to verify payment",
     });
   }
 };
